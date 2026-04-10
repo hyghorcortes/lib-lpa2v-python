@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, cast
+from typing import cast
 
 from ..models import EvidencePair
-from .base import LPA2vAlgorithm
+from .base import EvidenceInput, EvidencePairAlgorithm
 from .registry import registry
 
 
@@ -122,7 +122,7 @@ class ParaAnalyzerResult:
 
 
 @registry.register
-class ParaAnalyzer(LPA2vAlgorithm[EvidencePair | tuple[float, float] | dict[str, Any], ParaAnalyzerResult]):
+class ParaAnalyzer(EvidencePairAlgorithm[ParaAnalyzerResult]):
     """Implementacao orientada a objetos do para-analisador da LPA2v."""
 
     name = "para-analisador"
@@ -132,7 +132,7 @@ class ParaAnalyzer(LPA2vAlgorithm[EvidencePair | tuple[float, float] | dict[str,
     def __init__(self, thresholds: ParaAnalyzerThresholds | None = None) -> None:
         self.thresholds = thresholds or ParaAnalyzerThresholds()
 
-    def run(self, data: EvidencePair | tuple[float, float] | dict[str, Any]) -> ParaAnalyzerResult:
+    def run(self, data: EvidenceInput) -> ParaAnalyzerResult:
         evidence = self._coerce_evidence(data)
         state, region_id = self._classify(evidence.gc, evidence.gct)
         return ParaAnalyzerResult(
@@ -143,51 +143,6 @@ class ParaAnalyzer(LPA2vAlgorithm[EvidencePair | tuple[float, float] | dict[str,
             gc=evidence.gc,
             gct=evidence.gct,
             thresholds=self.thresholds,
-        )
-
-    def analyze(self, favorable: float, contrary: float, **metadata: Any) -> ParaAnalyzerResult:
-        return self.run(EvidencePair(favorable=favorable, contrary=contrary, metadata=metadata))
-
-    def analyze_legacy(self, favorable: float, contrary_complement: float, **metadata: Any) -> ParaAnalyzerResult:
-        return self.run(EvidencePair.from_legacy(favorable, contrary_complement, **metadata))
-
-    def _coerce_evidence(self, data: EvidencePair | tuple[float, float] | dict[str, Any]) -> EvidencePair:
-        if isinstance(data, EvidencePair):
-            return data
-
-        if isinstance(data, tuple):
-            if len(data) != 2:
-                raise ValueError("A tupla de entrada deve ter exatamente dois valores: (favorable, contrary).")
-            return EvidencePair(favorable=data[0], contrary=data[1])
-
-        if isinstance(data, dict):
-            if "favorable" in data and "contrary" in data:
-                metadata = dict(data.get("metadata", {}))
-                return EvidencePair(
-                    favorable=float(data["favorable"]),
-                    contrary=float(data["contrary"]),
-                    metadata=metadata,
-                )
-
-            if "mu" in data and "lambda" in data:
-                metadata = dict(data.get("metadata", {}))
-                return EvidencePair(
-                    favorable=float(data["mu"]),
-                    contrary=float(data["lambda"]),
-                    metadata=metadata,
-                )
-
-            if "mu" in data and "contrary_complement" in data:
-                metadata = dict(data.get("metadata", {}))
-                return EvidencePair.from_legacy(
-                    favorable=float(data["mu"]),
-                    contrary_complement=float(data["contrary_complement"]),
-                    **metadata,
-                )
-
-        raise TypeError(
-            "Entrada invalida para o para-analisador. Use EvidencePair, tupla (favorable, contrary) "
-            "ou dicionario com chaves reconhecidas."
         )
 
     def _classify(self, gc: float, gct: float) -> tuple[ParaAnalyzerState, int]:

@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lpa2v"
-version = "0.1.0"
+version = "0.3.0"
 description = "Biblioteca Python orientada a objetos para algoritmos baseados em LPA2v."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary" }
-keywords = ["lpa2v", "paraconsistente", "para-analisador", "algoritmos"]
+keywords = ["lpa2v", "paraconsistente", "para-analisador", "cap", "algoritmos"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",

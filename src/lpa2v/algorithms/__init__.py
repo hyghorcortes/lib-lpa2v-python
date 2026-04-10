@@ -1,4 +1,6 @@
-from .base import LPA2vAlgorithm
+from .base import EvidencePairAlgorithm, LPA2vAlgorithm
+from .cap import Cap
+from .nap import Nap
 from .para_analyzer import ParaAnalyzer
 from .registry import registry
 
@@ -12,7 +14,10 @@ def available_algorithms() -> tuple[str, ...]:
 
 
 __all__ = [
+    "EvidencePairAlgorithm",
     "LPA2vAlgorithm",
+    "Cap",
+    "Nap",
     "ParaAnalyzer",
     "available_algorithms",
     "create_algorithm",
