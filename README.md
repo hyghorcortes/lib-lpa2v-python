@@ -79,7 +79,9 @@ print(cap.run({"external_interval": 0.60, "mu": 0.70, "lambda": 0.20}).to_dict()
 
 Nas implementacoes antigas em MATLAB, em alguns pontos o segundo valor era usado como complemento de `lambda`.
 
-Para esse caso, a biblioteca oferece um atalho:
+Esse formato legado nao se aplica apenas ao `para-analisador`. Todos os algoritmos baseados em par de evidencias que herdam de `EvidencePairAlgorithm`, como `ParaAnalyzer`, `Nap` e `Cap`, aceitam esse formato.
+
+Exemplo com `ParaAnalyzer`:
 
 ```python
 from lpa2v import ParaAnalyzer
@@ -87,6 +89,30 @@ from lpa2v import ParaAnalyzer
 algorithm = ParaAnalyzer()
 result = algorithm.analyze_legacy(favorable=0.7, contrary_complement=0.8)
 ```
+
+Exemplo com `Nap`:
+
+```python
+from lpa2v import Nap
+
+algorithm = Nap()
+result = algorithm.analyze_legacy(favorable=0.7, contrary_complement=0.8)
+```
+
+Exemplo com `Cap`:
+
+```python
+from lpa2v import Cap
+
+algorithm = Cap()
+result = algorithm.run({
+    "external_interval": 0.60,
+    "mu": 0.70,
+    "contrary_complement": 0.80,
+})
+```
+
+Tambem e possivel usar esse formato ao chamar `run(...)` com dicionarios contendo `mu` e `contrary_complement`, o que facilita migrar codigos antigos sem precisar converter manualmente os valores para `lambda`.
 
 ## Linha de comando
 
