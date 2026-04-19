@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import cast
+from math import inf
+from typing import Any, cast
 
 from ..models import EvidencePair
 from .base import EvidenceInput, EvidencePairAlgorithm
@@ -45,15 +46,15 @@ class ParaAnalyzerThresholds:
             float(self.contradiction_limit) if self.contradiction_limit is not None else 1.0 - certainty_limit
         )
 
-        if not 0.0 < certainty_limit < 1.0:
-            raise ValueError("certainty_limit deve estar entre 0 e 1.")
-        if not 0.0 < contradiction_limit < 1.0:
-            raise ValueError("contradiction_limit deve estar entre 0 e 1.")
+        if not 0.0 < certainty_limit <= 1.0:
+            raise ValueError("certainty_limit deve estar no intervalo (0, 1].")
+        if not 0.0 <= contradiction_limit < 1.0:
+            raise ValueError("contradiction_limit deve estar no intervalo [0, 1).")
 
         comparison_factor = (
             float(self.comparison_factor)
             if self.comparison_factor is not None
-            else certainty_limit / contradiction_limit
+            else (certainty_limit / contradiction_limit if contradiction_limit > 0.0 else inf)
         )
         if comparison_factor <= 0.0:
             raise ValueError("comparison_factor deve ser maior que zero.")
@@ -64,7 +65,7 @@ class ParaAnalyzerThresholds:
 
     @classmethod
     def from_mean_and_sensitivity(cls, mean: float, sensitivity: float) -> "ParaAnalyzerThresholds":
-        """Cria limiares compativeis com a variante adaptativa baseada em m_e e s."""
+        """Cria limiares compativeis com a CPAet baseada em m_e e s."""
 
         mean_value = float(mean)
         sensitivity_value = float(sensitivity)
@@ -134,23 +135,33 @@ class ParaAnalyzer(EvidencePairAlgorithm[ParaAnalyzerResult]):
 
     def run(self, data: EvidenceInput) -> ParaAnalyzerResult:
         evidence = self._coerce_evidence(data)
-        state, region_id = self._classify(evidence.gc, evidence.gct)
+        gc = evidence.gc
+        gct = evidence.gct
+        state, region_id = self.classify_values(gc, gct, thresholds=self.thresholds)
         return ParaAnalyzerResult(
             algorithm=self.name,
             evidence=evidence,
             state=state,
             region_id=region_id,
-            gc=evidence.gc,
-            gct=evidence.gct,
+            gc=gc,
+            gct=gct,
             thresholds=self.thresholds,
         )
 
-    def _classify(self, gc: float, gct: float) -> tuple[ParaAnalyzerState, int]:
-        c1 = self.thresholds.c1
-        c2 = self.thresholds.c2
-        c3 = self.thresholds.c3
-        c4 = self.thresholds.c4
-        scaled_gct = cast(float, self.thresholds.comparison_factor) * gct
+    @staticmethod
+    def classify_values(
+        gc: float,
+        gct: float,
+        *,
+        thresholds: ParaAnalyzerThresholds,
+    ) -> tuple[ParaAnalyzerState, int]:
+        c1 = thresholds.c1
+        c2 = thresholds.c2
+        c3 = thresholds.c3
+        c4 = thresholds.c4
+        scaled_gct = cast(float, thresholds.comparison_factor) * gct
+        abs_gc = abs(gc)
+        abs_scaled_gct = abs(scaled_gct)
 
         if gc >= c1:
             return ParaAnalyzerState.V, 10
@@ -162,41 +173,44 @@ class ParaAnalyzer(EvidencePairAlgorithm[ParaAnalyzerResult]):
             return ParaAnalyzerState.NOT_T, 1
 
         if 0.0 <= gc < c1 and 0.0 <= gct < c3:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QV_T, 9
             return ParaAnalyzerState.QT_V, 8
 
         if 0.0 <= gc < c1 and c4 < gct < 0.0:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QV_NOT_T, 11
             return ParaAnalyzerState.QNOT_T_V, 12
 
         if c2 < gc < 0.0 and 0.0 <= gct < c3:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QF_T, 5
             return ParaAnalyzerState.QT_F, 6
 
         if c2 < gc < 0.0 and c4 < gct < 0.0:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QF_NOT_T, 3
             return ParaAnalyzerState.QNOT_T_F, 2
 
         # Fallback para pontos de fronteira afetados por arredondamento numerico.
         if gc >= 0.0 and gct >= 0.0:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QV_T, 9
             return ParaAnalyzerState.QT_V, 8
 
         if gc >= 0.0 and gct < 0.0:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QV_NOT_T, 11
             return ParaAnalyzerState.QNOT_T_V, 12
 
         if gc < 0.0 and gct >= 0.0:
-            if abs(gc) >= abs(scaled_gct):
+            if abs_gc >= abs_scaled_gct:
                 return ParaAnalyzerState.QF_T, 5
             return ParaAnalyzerState.QT_F, 6
 
-        if abs(gc) >= abs(scaled_gct):
+        if abs_gc >= abs_scaled_gct:
             return ParaAnalyzerState.QF_NOT_T, 3
         return ParaAnalyzerState.QNOT_T_F, 2
+
+    def _classify(self, gc: float, gct: float) -> tuple[ParaAnalyzerState, int]:
+        return self.classify_values(gc, gct, thresholds=self.thresholds)
