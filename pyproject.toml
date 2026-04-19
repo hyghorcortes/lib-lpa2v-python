@@ -4,18 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lpa2v"
-version = "0.3.0"
+version = "0.4.0"
 description = "Biblioteca Python orientada a objetos para algoritmos baseados em LPA2v."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = { file = "LICENSE" }
 keywords = ["lpa2v", "paraconsistente", "para-analisador", "cap", "algoritmos"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "License :: Other/Proprietary License",
+  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Scientific/Engineering :: Information Analysis",
@@ -27,6 +27,7 @@ lpa2v = "lpa2v.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
