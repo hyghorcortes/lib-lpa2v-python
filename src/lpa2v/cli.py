@@ -4,6 +4,7 @@ import argparse
 import json
 
 from .algorithms import available_algorithms, create_algorithm
+from .algorithms.cpaet import DEFAULT_BOOTSTRAP_VALUE, DEFAULT_ERROR_MARGIN
 from .algorithms.para_analyzer import ParaAnalyzerThresholds
 
 
@@ -57,6 +58,36 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Intervalo externo de evidencia (phi_ext).",
     )
+
+    capet_parser = subparsers.add_parser("capet", help="Executa o algoritmo CAPet/CPAet.")
+    _add_common_evidence_arguments(capet_parser)
+    capet_parser.add_argument(
+        "--moving-average-in",
+        "--me-in",
+        dest="moving_average_in",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Vetor temporal me_in com as melhores evidencias usadas na media movel.",
+    )
+    capet_parser.add_argument(
+        "--window-size",
+        type=int,
+        default=None,
+        help="Tamanho da janela para inicializacao bootstrap de me_in.",
+    )
+    capet_parser.add_argument(
+        "--error-margin",
+        type=float,
+        default=DEFAULT_ERROR_MARGIN,
+        help="Margem conservadora s aplicada sobre a media movel.",
+    )
+    capet_parser.add_argument(
+        "--bootstrap-value",
+        type=float,
+        default=DEFAULT_BOOTSTRAP_VALUE,
+        help="Valor semente usado para montar me_in quando window_size e informado.",
+    )
     return parser
 
 
@@ -69,6 +100,22 @@ def _resolve_evidence_payload(parser: argparse.ArgumentParser, args: argparse.Na
     if args.lambda_value is not None:
         return {"mu": args.mu, "lambda": args.lambda_value}
     return {"mu": args.mu, "contrary_complement": args.contrary_complement}
+
+
+def _resolve_capet_temporal_payload(parser: argparse.ArgumentParser, args: argparse.Namespace) -> dict[str, object]:
+    if args.moving_average_in is None and args.window_size is None:
+        parser.error("Forneca --moving-average-in/--me-in ou --window-size para o CAPet.")
+    if args.moving_average_in is not None and args.window_size is not None:
+        parser.error("Use apenas um entre --moving-average-in/--me-in e --window-size.")
+
+    payload: dict[str, object] = {"error_margin": args.error_margin}
+    if args.moving_average_in is not None:
+        payload["moving_average_in"] = args.moving_average_in
+        return payload
+
+    payload["window_size"] = args.window_size
+    payload["bootstrap_value"] = args.bootstrap_value
+    return payload
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,6 +147,14 @@ def main(argv: list[str] | None = None) -> int:
         algorithm = create_algorithm("cap")
         payload = _resolve_evidence_payload(parser, args, "CAP")
         payload["external_interval"] = args.external_interval
+        result = algorithm.run(payload)
+        print(json.dumps(result.to_dict(), ensure_ascii=True, indent=2))
+        return 0
+
+    if args.command == "capet":
+        algorithm = create_algorithm("capet")
+        payload = _resolve_evidence_payload(parser, args, "CAPet")
+        payload.update(_resolve_capet_temporal_payload(parser, args))
         result = algorithm.run(payload)
         print(json.dumps(result.to_dict(), ensure_ascii=True, indent=2))
         return 0

@@ -3,6 +3,7 @@
 from .algorithms import available_algorithms, create_algorithm, registry
 from .algorithms.base import EvidencePairAlgorithm, LPA2vAlgorithm
 from .algorithms.cap import Cap, CapInput, CapMode, CapResult
+from .algorithms.cpaet import Capet, CapetInput, CapetResult
 from .algorithms.nap import Nap, NapResult
 from .algorithms.para_analyzer import (
     ParaAnalyzer,
@@ -20,6 +21,9 @@ __all__ = [
     "CapInput",
     "CapMode",
     "CapResult",
+    "Capet",
+    "CapetInput",
+    "CapetResult",
     "Nap",
     "NapResult",
     "ParaAnalyzer",
@@ -31,4 +35,4 @@ __all__ = [
     "registry",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
