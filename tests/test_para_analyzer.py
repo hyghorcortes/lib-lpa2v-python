@@ -90,6 +90,16 @@ class ParaAnalyzerStateTests(unittest.TestCase):
         self.assertEqual(result.state, ParaAnalyzerState.QV_T)
         self.assertEqual(result.region_id, 9)
 
+    def test_classify_values_matches_run_output(self) -> None:
+        """Mantem a classificacao direta alinhada com a execucao orientada a objeto."""
+
+        evidence = EvidencePair(favorable=0.80, contrary=0.55)
+        result = self.algorithm.run(evidence)
+        state, region_id = ParaAnalyzer.classify_values(result.gc, result.gct, thresholds=self.algorithm.thresholds)
+
+        self.assertEqual(state, result.state)
+        self.assertEqual(region_id, result.region_id)
+
 
 def _build_analysis_case_test(case: AnalysisCase):
     def test_method(self: ParaAnalyzerStateTests) -> None:
